@@ -62,14 +62,14 @@ def _make_graph_edges_3d(n_x, n_y, n_z):
     return edges
 
 
-def _compute_weights_3d(data, beta=130, eps=1.e-6, depth=1.,
+def _compute_weights_3d(data, sampling, beta=130, eps=1.e-6,
                         multichannel=False):
     # Weight calculation is main difference in multispectral version
     # Original gradient**2 replaced with sum of gradients ** 2
     gradients = 0
     for channel in range(0, data.shape[-1]):
         gradients += _compute_gradients_3d(data[..., channel],
-                                           depth=depth) ** 2
+                                           sampling) ** 2
     # All channels considered together in this standard deviation
     beta /= 10 * data.std()
     if multichannel:
@@ -82,10 +82,10 @@ def _compute_weights_3d(data, beta=130, eps=1.e-6, depth=1.,
     return weights
 
 
-def _compute_gradients_3d(data, depth=1.):
-    gr_deep = np.abs(data[:, :, :-1] - data[:, :, 1:]).ravel() / depth
-    gr_right = np.abs(data[:, :-1] - data[:, 1:]).ravel()
-    gr_down = np.abs(data[:-1] - data[1:]).ravel()
+def _compute_gradients_3d(data, sampling):
+    gr_deep = np.abs(data[:, :, :-1] - data[:, :, 1:]).ravel() / sampling[2]
+    gr_right = np.abs(data[:, :-1] - data[:, 1:]).ravel() / sampling[1]
+    gr_down = np.abs(data[:-1] - data[1:]).ravel() / sampling[1]
     return np.r_[gr_deep, gr_right, gr_down]
 
 
@@ -101,9 +101,10 @@ def _make_laplacian_sparse(edges, weights):
     lap = sparse.coo_matrix((data, (i_indices, j_indices)),
                             shape=(pixel_nb, pixel_nb))
     connect = - np.ravel(lap.sum(axis=1))
-    lap = sparse.coo_matrix((np.hstack((data, connect)),
-                (np.hstack((i_indices, diag)), np.hstack((j_indices, diag)))),
-                shape=(pixel_nb, pixel_nb))
+    lap = sparse.coo_matrix(
+        (np.hstack((data, connect)), (np.hstack((i_indices, diag)),
+                                      np.hstack((j_indices, diag)))),
+        shape=(pixel_nb, pixel_nb))
     return lap.tocsr()
 
 
@@ -157,10 +158,11 @@ def _mask_edges_weights(edges, weights, mask):
     return edges, weights
 
 
-def _build_laplacian(data, mask=None, beta=50, depth=1., multichannel=False):
+def _build_laplacian(data, sampling, mask=None, beta=50,
+                     multichannel=False):
     l_x, l_y, l_z = data.shape[:3]
     edges = _make_graph_edges_3d(l_x, l_y, l_z)
-    weights = _compute_weights_3d(data, beta=beta, eps=1.e-10, depth=depth,
+    weights = _compute_weights_3d(data, sampling, beta=beta, eps=1.e-10,
                                   multichannel=multichannel)
     if mask is not None:
         edges, weights = _mask_edges_weights(edges, weights, mask)
@@ -173,7 +175,8 @@ def _build_laplacian(data, mask=None, beta=50, depth=1., multichannel=False):
 
 
 def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
-                  multichannel=False, return_full_prob=False, depth=1.):
+                  multichannel=False, return_full_prob=False, depth=1.,
+                  sampling=None):
     """Random walker algorithm for segmentation from markers.
 
     Random walker algorithm is implemented for gray-level or multichannel
@@ -231,7 +234,7 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
     return_full_prob : bool, default False
         If True, the probability that a pixel belongs to each of the labels
         will be returned, instead of only the most likely label.
-    depth : float, default 1.
+    depth : float, default 1. [DEPRECATED]
         Correction for non-isotropic voxel depths in 3D volumes.
         Default (1.) implies isotropy.  This factor is derived as follows:
         depth = (out-of-plane voxel spacing) / (in-plane voxel spacing), where
@@ -330,6 +333,10 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
                       'random walker functions. You may also install pyamg '
                       'and run the random walker function in cg_mg mode '
                       '(see the docstrings)')
+    if depth != 1.:
+        warnings.warn('The depth kwarg is deprecated, use sampling instead.')
+    if sampling is None:
+            sampling = (1., 1.) + (depth, )
 
     # Parse input data
     if not multichannel:
@@ -363,10 +370,10 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
         del filled
     labels = np.atleast_3d(labels)
     if np.any(labels < 0):
-        lap_sparse = _build_laplacian(data, mask=labels >= 0, beta=beta,
-                                      depth=depth, multichannel=multichannel)
+        lap_sparse = _build_laplacian(data, sampling, mask=labels >= 0,
+                                      beta=beta, multichannel=multichannel)
     else:
-        lap_sparse = _build_laplacian(data, beta=beta, depth=depth,
+        lap_sparse = _build_laplacian(data, sampling, beta=beta,
                                       multichannel=multichannel)
     lap_sparse, B = _buildAB(lap_sparse, labels)
     # We solve the linear system
