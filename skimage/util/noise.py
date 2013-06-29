@@ -2,7 +2,7 @@ import numpy as np
 from .dtype import img_as_float
 
 
-__all__ = ['add_noise']
+__all__ = ['random_noise']
 
 
 def random_noise(image, mode='gaussian', seed=None, **kwargs):
@@ -22,7 +22,7 @@ def random_noise(image, mode='gaussian', seed=None, **kwargs):
         'pepper'    Replaces random pixels with 0.
         's&p'       Replaces random pixels with 0 or 1.
         'speckle'   Multiplicative noise using out = image + n*image, where
-                    n is uniform noise with specified mean & var.
+                    n is uniform noise with specified mean & variance.
     seed : int
         If provided, this will set the random seed before generating noise.
     m : float
@@ -90,5 +90,30 @@ def random_noise(image, mode='gaussian', seed=None, **kwargs):
             out[mask] = np.poisson(val, mask.sum())
 
     elif mode == 'salt':
+        # Re-call function with mode='s&p' and p=1 (all salt noise)
+        out = random_noise(image, mode='s&p', seed=seed, d=kwargs['d'], p=1)
+
+    elif mode == 'pepper':
+        # Re-call function with mode='s&p' and p=1 (all pepper noise)
+        out = random_noise(image, mode='s&p', seed=seed, d=kwargs['d'], p=0)
+
+    elif mode == 's&p':
+        out = image.copy()
+
+        # Salt mode
+        num_salt = np.ceil(kwargs['d'] * image.size * kwargs['p'])
+        coords = [np.random.randint(0, i - 1, num_salt)
+                  for i in image.shape]
+        out[coords] = 1
+
+        # Pepper mode
+        num_pepper = np.ceil(kwargs['d'] * image.size * (1. - kwargs['p']))
+        coords = [np.random.randint(0, i - 1, num_pepper)
+                  for i in image.shape]
+        out[coords] = 0
+
+    elif mode == 'speckle':
+        noise = np.random.normal(kwargs['m'], kwargs['v'] ** 0.5, image.shape)
+        out = np.clip(image + image * noise, 0., 1.)
 
     return out
