@@ -5,9 +5,9 @@ from .dtype import img_as_float
 __all__ = ['add_noise']
 
 
-def add_noise(image, mode='gaussian', seed=None, **kwargs):
+def random_noise(image, mode='gaussian', seed=None, **kwargs):
     """
-    Function to add noise of various types to a floating-point image.
+    Function to add random noise of various types to a floating-point image.
 
     Parameters
     ----------
@@ -82,9 +82,13 @@ def add_noise(image, mode='gaussian', seed=None, **kwargs):
 
     elif mode == 'poisson':
         # Generating noise for each unique value in image.
-        noise = np.zeros_like(image)
+        out = np.zeros_like(image)
         for val in np.unique(image):
+            # Generate mask for a unique value, replace w/values drawn from
+            # Poisson distribution about the unique value
+            mask = image == val
+            out[mask] = np.poisson(val, mask.sum())
 
-
+    elif mode == 'salt':
 
     return out
