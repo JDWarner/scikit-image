@@ -8,12 +8,9 @@ from libc.math cimport sin, cos, abs
 from skimage._shared.interpolation cimport bilinear_interpolation
 
 
-def _glcm_loop(cnp.ndarray[dtype=cnp.uint8_t, ndim=2,
-                           negative_indices=False, mode='c'] image,
-               cnp.ndarray[dtype=cnp.float64_t, ndim=1,
-                           negative_indices=False, mode='c'] distances,
-               cnp.ndarray[dtype=cnp.float64_t, ndim=1,
-                           negative_indices=False, mode='c'] angles,
+def _glcm_loop(unsigned char [:, ::1] image,
+               double[::1] distances,
+               double[::1] angles,
                int levels,
                cnp.ndarray[dtype=cnp.uint32_t, ndim=4,
                            negative_indices=False, mode='c'] out):
@@ -81,19 +78,19 @@ cdef inline int _bit_rotate_right(int value, int length):
     return (value >> 1) | ((value & 1) << (length - 1))
 
 
-def _local_binary_pattern(cnp.ndarray[double, ndim=2] image,
+def _local_binary_pattern(cnp.ndarray[double, ndim=2, mode='c'] image,
                           int P, float R, char method='D'):
     """Gray scale and rotation invariant LBP (Local Binary Patterns).
 
-    LBP is an invariant descriptor that can be used for texture classification.
+    LBP is an invariant descriptor for texture classification.
 
     Parameters
     ----------
     image : (N, M) double array
         Graylevel image.
     P : int
-        Number of circularly symmetric neighbour set points (quantization of the
-        angular space).
+        Number of circularly symmetric neighbour set points (quantization of
+        the angular space).
     R : float
         Radius of circle (spatial resolution of the operator).
     method : {'D', 'R', 'U', 'V'}
@@ -111,19 +108,19 @@ def _local_binary_pattern(cnp.ndarray[double, ndim=2] image,
     """
 
     # texture weights
-    cdef cnp.ndarray[int, ndim=1] weights = 2 ** np.arange(P, dtype=np.int32)
+    cdef int[::1] weights = 2 ** np.arange(P, dtype=np.int32)
     # local position of texture elements
-    rp = - R * np.sin(2 * np.pi * np.arange(P, dtype=np.double) / P)
-    cp = R * np.cos(2 * np.pi * np.arange(P, dtype=np.double) / P)
-    cdef cnp.ndarray[double, ndim=2] coords = np.round(np.vstack([rp, cp]).T, 5)
+    rp = - R * np.sin(2 * np.pi * np.arange(P, dtype=np.float64) / P)
+    cp = R * np.cos(2 * np.pi * np.arange(P, dtype=np.float64) / P)
+    cdef double[:, :] coords = np.round(np.vstack([rp, cp]).T, 5)
 
     # pre allocate arrays for computation
-    cdef cnp.ndarray[double, ndim=1] texture = np.zeros(P, np.double)
-    cdef cnp.ndarray[char, ndim=1] signed_texture = np.zeros(P, np.int8)
-    cdef cnp.ndarray[int, ndim=1] rotation_chain = np.zeros(P, np.int32)
+    cdef double[::1] texture = np.zeros(P, np.float64)
+    cdef char[::1] signed_texture = np.zeros(P, np.int8)
+    cdef int[::1] rotation_chain = np.zeros(P, np.int32)
 
     output_shape = (image.shape[0], image.shape[1])
-    cdef cnp.ndarray[double, ndim=2] output = np.zeros(output_shape, np.double)
+    cdef double[:, ::1] output = np.zeros(output_shape, dtype=np.float64)
 
     cdef Py_ssize_t rows = image.shape[0]
     cdef Py_ssize_t cols = image.shape[1]
