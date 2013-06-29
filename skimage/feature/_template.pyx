@@ -50,16 +50,17 @@ from skimage.transform import integral
 def match_template(cnp.ndarray[float, ndim=2, mode="c"] image,
                    cnp.ndarray[float, ndim=2, mode="c"] template):
 
-    cdef cnp.ndarray[float, ndim=2, mode="c"] corr
-    cdef cnp.ndarray[float, ndim=2, mode="c"] image_sat
-    cdef cnp.ndarray[float, ndim=2, mode="c"] image_sqr_sat
-    cdef float template_mean = np.mean(template)
-    cdef float template_ssd
-    cdef float inv_area
-    cdef Py_ssize_t r, c, r_end, c_end
-    cdef Py_ssize_t template_rows = template.shape[0]
-    cdef Py_ssize_t template_cols = template.shape[1]
-    cdef float den, window_sqr_sum, window_mean_sqr, window_sum
+    cdef:
+        float[:, ::1] corr
+        cnp.ndarray[float, ndim=2, mode="c"] image_sat
+        cnp.ndarray[float, ndim=2, mode="c"] image_sqr_sat
+        float template_mean = np.mean(template)
+        float template_ssd
+        float inv_area
+        Py_ssize_t r, c, r_end, c_end
+        Py_ssize_t template_rows = template.shape[0]
+        Py_ssize_t template_cols = template.shape[1]
+        float den, window_sqr_sum, window_mean_sqr, window_sum
 
     image_sat = integral.integral_image(image)
     image_sqr_sat = integral.integral_image(image**2)
@@ -94,4 +95,4 @@ def match_template(cnp.ndarray[float, ndim=2, mode="c"] image,
             den = sqrt((window_sqr_sum - window_mean_sqr) * template_ssd)
             corr[r, c] /= den
 
-    return corr
+    return np.asarray(corr)
