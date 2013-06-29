@@ -86,9 +86,9 @@ def test_daisy_normalization():
 
 
 def test_daisy_visualization():
-    img = img_as_float(data.lena()[:128, :128].mean(axis=2))
+    img = img_as_float(data.lena()[:64, :64].mean(axis=2))
     descs, descs_img = daisy(img, visualize=True)
-    assert(descs_img.shape == (128, 128, 3))
+    assert(descs_img.shape == (64, 64, 3))
 
 if __name__ == '__main__':
     from numpy import testing
