@@ -85,7 +85,7 @@ def _compute_weights_3d(data, sampling, beta=130, eps=1.e-6,
 def _compute_gradients_3d(data, sampling):
     gr_deep = np.abs(data[:, :, :-1] - data[:, :, 1:]).ravel() / sampling[2]
     gr_right = np.abs(data[:, :-1] - data[:, 1:]).ravel() / sampling[1]
-    gr_down = np.abs(data[:-1] - data[1:]).ravel() / sampling[1]
+    gr_down = np.abs(data[:-1] - data[1:]).ravel() / sampling[0]
     return np.r_[gr_deep, gr_right, gr_down]
 
 
@@ -217,7 +217,7 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
         - 'cg_mg' (conjugate gradient with multigrid preconditioner): a
           preconditioner is computed using a multigrid solver, then the
           solution is computed with the Conjugate Gradient method.  This mode
-          requires that the pyamg module (http://code.google.com/p/pyamg/) is
+          requires that the pyamg module (http://pyamg.org/) is
           installed. For images of size > 512x512, this is the recommended
           (fastest) mode.
 
@@ -240,6 +240,10 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
         depth = (out-of-plane voxel spacing) / (in-plane voxel spacing), where
         in-plane voxel spacing represents the first two spatial dimensions and
         out-of-plane voxel spacing represents the third spatial dimension.
+        `depth` is deprecated as of 0.9, in favor of `sampling`.
+    sampling : iterable of floats
+        Sampling between voxels in each spatial dimension. If `None`, then
+        the spacing between pixels/voxels in each dimension is assumed 1.
 
     Returns
     -------
@@ -262,12 +266,9 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
     Multichannel inputs are scaled with all channel data combined. Ensure all
     channels are separately normalized prior to running this algorithm.
 
-    The `depth` argument is specifically for certain types of 3-dimensional
-    volumes which, due to how they were acquired, have different spacing
-    along in-plane and out-of-plane dimensions. This is commonly encountered
-    in medical imaging. The `depth` argument corrects gradients calculated
-    along the third spatial dimension for the otherwise inherent assumption
-    that all points are equally spaced.
+    The `sampling` argument is specifically for anisotropic datasets, where
+    data points are spaced differently in one or more spatial dmensions.
+    Anisotropic data is commonly encountered in medical imaging.
 
     The algorithm was first proposed in *Random walks for image
     segmentation*, Leo Grady, IEEE Trans Pattern Anal Mach Intell.
@@ -334,7 +335,8 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
                       'and run the random walker function in cg_mg mode '
                       '(see the docstrings)')
     if depth != 1.:
-        warnings.warn('The depth kwarg is deprecated, use sampling instead.')
+        warnings.warn('`depth` kwarg is deprecated, and will be removed in the'
+                      ' next major version. Use `sampling` instead.')
     if sampling is None:
             sampling = (1., 1.) + (depth, )
 
@@ -386,7 +388,7 @@ def random_walker(data, labels, beta=130, mode='bf', tol=1.e-3, copy=True,
     if mode == 'cg_mg':
         if not amg_loaded:
             warnings.warn(
-                """pyamg (http://code.google.com/p/pyamg/)) is needed to use
+                """pyamg (http://pyamg.org/)) is needed to use
                 this mode, but is not installed. The 'cg' mode will be used
                 instead.""")
             X = _solve_cg(lap_sparse, B, tol=tol,

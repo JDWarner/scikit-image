@@ -1,5 +1,6 @@
 import numpy as np
 from skimage.segmentation import random_walker
+from skimage.transform import resize
 
 
 def make_2d_syntheticdata(lx, ly=None):
@@ -179,6 +180,56 @@ def test_multispectral_3d():
     assert (single_labels.reshape(labels.shape)[13:17, 13:17, 13:17] == 2).all()
     assert data[..., 0].shape == labels.shape
     return data, multi_labels, single_labels, labels
+
+
+def test_depth():
+    n = 30
+    lx, ly, lz = n, n, n
+    data, _ = make_3d_syntheticdata(lx, ly, lz)
+
+    # Rescale `data` along Z axis
+    data_aniso = np.zeros((n, n, n // 2))
+    for i, yz in enumerate(data):
+        data_aniso[i, :, :] = resize(yz, (n, n // 2))
+
+    # Generate new labels
+    small_l = int(lx // 5)
+    labels_aniso = np.zeros_like(data_aniso)
+    labels_aniso[lx // 5, ly // 5, lz // 5] = 1
+    labels_aniso[lx // 2 + small_l // 4,
+                 ly // 2 - small_l // 4,
+                 lz // 4 - small_l // 8] = 2
+
+    # Test with `depth` kwarg
+    labels_aniso = random_walker(data_aniso, labels_aniso, mode='cg',
+                                 depth=0.5)
+
+    assert (labels_aniso[13:17, 13:17, 7:9] == 2).all()
+
+
+def test_sampling():
+    n = 30
+    lx, ly, lz = n, n, n
+    data, _ = make_3d_syntheticdata(lx, ly, lz)
+
+    # Rescale `data` along Y axis
+    data_aniso = np.zeros((n, n * 2, n))
+    for i, yz in enumerate(data):
+        data_aniso[i, :, :] = resize(yz, (n * 2, n))
+
+    # Generate new labels
+    small_l = int(lx // 5)
+    labels_aniso = np.zeros_like(data_aniso)
+    labels_aniso[lx // 5, ly // 5, lz // 5] = 1
+    labels_aniso[lx // 2 + small_l // 4,
+                 ly - small_l // 2,
+                 lz // 2 - small_l // 4] = 2
+
+    # Test with `depth` kwarg
+    labels_aniso = random_walker(data_aniso, labels_aniso, mode='cg',
+                                 sampling=(1., 2., 1.))
+
+    assert (labels_aniso[13:17, 26:34, 13:17] == 2).all()
 
 
 if __name__ == '__main__':
