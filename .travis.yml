@@ -68,9 +68,10 @@ script:
     #   The solution was suggested here
     #   https://groups.google.com/a/continuum.io/forum/#!topic/anaconda/-DLG2ZdTkw0
     - if [[ $ENV == python=3.2 ]]; then
-        sudo apt-get install -qq python3-pyqt4;
-        travis_retry pip install -q matplotlib;
-        travis_retry pip install -q networkx;
+        while true; do echo "..."; sleep 60; done &
+        sudo apt-get install python3-pyqt4-dbg;
+        travis_retry pip install matplotlib;
+        travis_retry pip install networkx;
       else
         travis_retry conda install -q matplotlib pyqt networkx;
         sudo cp ~/miniconda/envs/test/include/png* /usr/include;
