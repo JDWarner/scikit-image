@@ -9,7 +9,9 @@ If no tag is given, the current output of 'git describe' is used.  If given,
 that is how the resulting directory will be named.
 
 In practice, you should use either actual clean tags from a current build or
-something like 'current' as a stable URL for the mest current version of the """
+something like 'current' as a stable URL for the most current version of the
+doc build.
+"""
 
 #-----------------------------------------------------------------------------
 # Imports
@@ -19,7 +21,6 @@ import re
 import shutil
 import sys
 from os import chdir as cd
-from os.path import join as pjoin
 
 from subprocess import Popen, PIPE, CalledProcessError, check_call
 
@@ -31,6 +32,7 @@ pages_dir = 'gh-pages'
 html_dir = 'build/html'
 pdf_dir = 'build/latex'
 pages_repo = 'https://github.com/scikit-image/docs.git'
+
 
 #-----------------------------------------------------------------------------
 # Functions
@@ -69,7 +71,7 @@ def sh3(cmd):
 
 def init_repo(path):
     """clone the gh-pages repo if we haven't already."""
-    sh("git clone %s %s"%(pages_repo, path))
+    sh("git clone %s %s" % (pages_repo, path))
     here = os.getcwd()
     cd(path)
     sh('git checkout gh-pages')
@@ -94,7 +96,6 @@ if __name__ == '__main__':
 
             break
 
-
     startdir = os.getcwd()
     if not os.path.exists(pages_dir):
         # init the repo
@@ -112,7 +113,9 @@ if __name__ == '__main__':
     shutil.rmtree(dest, ignore_errors=True)
     shutil.copytree(html_dir, dest)
     # copy pdf file into tree
-    #shutil.copy(pjoin(pdf_dir, 'scikits.image.pdf'), pjoin(dest, 'scikits.image.pdf'))
+    # from os.path import join as pjoin
+    # shutil.copy(pjoin(pdf_dir, 'scikits.image.pdf'),
+    #             pjoin(dest, 'scikits.image.pdf'))
 
     try:
         cd(pages_dir)
