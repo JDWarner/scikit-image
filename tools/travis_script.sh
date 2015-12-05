@@ -46,7 +46,7 @@ elif [[ $PY != 3.2* ]]; then
 fi
 
 if [[ $PY == 2.* ]]; then
-    pip install --retries 3 -q pyamg
+    pip install --retries 3 pyamg==2.2
 fi
 
 # Show what's installed
